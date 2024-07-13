@@ -54,7 +54,6 @@ export class SolidStartSite extends SsrSite {
       streaming: nitro.preset === "aws-lambda-streaming",
     };
 
-
     const buildMeta = {
       assetsPath,
       staticRoutes: fs
@@ -75,11 +74,15 @@ export class SolidStartSite extends SsrSite {
         },
       },
       origins: {
-        server: {
-          constructId: "ServerFunction",
-          type: "function" as const,
-          function: serverConfig,
-        },
+        ...(edge
+          ? {}
+          : {
+              server: {
+                constructId: "ServerFunction",
+                type: "function" as const,
+                function: serverConfig,
+              },
+            }),
         s3: {
           type: "s3" as const,
           copy: [
@@ -87,16 +90,23 @@ export class SolidStartSite extends SsrSite {
               from: buildMeta.assetsPath,
               to: "",
               cached: true,
-            }
+            },
           ],
         },
       },
       behaviors: [
-        {
-          cacheType: "server",
-          cfFunction: "serverCfFunction",
-          origin: "server",
-        },
+        edge
+          ? {
+              cacheType: "server" as const,
+              cfFunction: "serverCfFunction",
+              edgeFunction: "edgeServer",
+              origin: "s3",
+            }
+          : {
+              cacheType: "server",
+              cfFunction: "serverCfFunction",
+              origin: "server",
+            },
         {
           pattern: "_server/",
           cacheType: "server",

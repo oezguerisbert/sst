@@ -16,6 +16,12 @@ The `SolidStartSite` construct is a higher level CDK construct that makes it eas
    npx create-solid@latest
    ```
 
+   or use pnpm
+
+   ```bash
+   pnpm create solid
+   ```
+
    And make sure to enable `Server Side Rendering`.
 
    ![Select SolidStart App template](/img/solid-start/bootstrap-solid-start.png)
@@ -30,7 +36,7 @@ The `SolidStartSite` construct is a higher level CDK construct that makes it eas
    └─ my-solid-app     <-- new SolidStart app
       ├─ src
       ├─ public
-      └─ vite.config.ts
+      └─ app.config.ts
    ```
 
    Continue to step 3.
@@ -48,30 +54,28 @@ The `SolidStartSite` construct is a higher level CDK construct that makes it eas
       └─ vite.config.ts
    ```
 
-3. Let's set up the [`solid-start-sst` adapter](https://www.npmjs.com/package/solid-start-sst) for your SolidStart app. The adapter will transform the SSR functions to a format that can be deployed to AWS. To do that, make sure your `vite.config.ts` looks like the following.
+3. Let's set up the [App Config](https://www.npmjs.com/package/solid-start-sst) for your SolidStart app. The config will transform the SSR functions to a format that can be deployed to AWS. To do that, make sure your `app.config.ts` looks like the following.
 
    ```ts
-   import solid from "solid-start/vite";
-   import aws from "solid-start-sst";
-   import { defineConfig } from "vite";
+   import { defineConfig } from "@solidjs/start/config";
 
    export default defineConfig({
-     plugins: [solid({ adapter: aws() })],
+     server: {
+       preset: "aws-lambda",
+       inlineDynamicImports: true, // Creates a single file instead of chunks
+     },
    });
    ```
 
-   And add the `solid-start-sst` dependency to your SolidStart app's `package.json`.
+   > Note: In order to use the `aws-lambda-streaming` preset, you need to install the [`nightly` version](https://nitro.unjs.io/guide/nightly) of [`nitropack`](https://nitro.unjs.io/deploy/providers/aws#streaming-support-experimental).
 
-   ```bash
-   npm install --save-dev solid-start-sst
-   ```
-
-   :::info
-   If you are deploying the `SolidStartSite` in the `edge` mode, use the edge adapter instead.
-
-   ```diff
-   - plugins: [solid({ adapter: aws() })],
-   + plugins: [solid({ adapter: aws({ edge: true }) })],
+   ```json
+   {
+    ...
+     "overrides": {
+       "nitropack": "npm:nitropack-nightly@latest"
+     },
+   }
    ```
 
    :::
@@ -80,10 +84,10 @@ The `SolidStartSite` construct is a higher level CDK construct that makes it eas
 
    ```diff
      "scripts": {
-   -   "dev": "solid-start dev",
-   +   "dev": "sst bind solid-start dev",
-       "build": "solid-start build",
-       "start": "solid-start start"
+   -   "dev": "vinxi dev",
+   +   "dev": "sst bind vinxi dev",
+       "build": "vinxi build",
+       "start": "vinxi start"
      },
    ```
 
@@ -103,7 +107,7 @@ The `SolidStartSite` construct is a higher level CDK construct that makes it eas
 
      // Add the site's URL to stack output
      stack.addOutputs({
-       URL: site.url || "localhost",
+       URL: site.url || "http://localhost:3000",
      });
    }
    ```

@@ -34,9 +34,36 @@ export class SolidStartSite extends SsrSite {
 
   protected plan() {
     const { path: sitePath, edge } = this.props;
+
+    const assetsPath = path.join(".output", "public");
+
+    const nitro = JSON.parse(
+      fs.readFileSync(path.join(sitePath, ".output/nitro.json")).toString()
+    );
+
+    if (!["aws-lambda-streaming", "aws-lambda"].includes(nitro.preset)) {
+      throw new Error(
+        `SST detected that your SolidStart app is configured with the "${nitro.preset}" preset. This preset is not supported by SST. We recommend you to use the "aws-lambda" or "aws-lambda-streaming" preset instead.`
+      );
+    }
+
     const serverConfig = {
       description: "Server handler for Solid",
-      handler: path.join(sitePath, "dist", "server", "index.handler"),
+      handler: "index.handler",
+      bundle: path.join(sitePath, ".output", "server"),
+      streaming: nitro.preset === "aws-lambda-streaming",
+    };
+
+
+    const buildMeta = {
+      assetsPath,
+      staticRoutes: fs
+        .readdirSync(path.join(sitePath, assetsPath))
+        .map((item) =>
+          fs.statSync(path.join(sitePath, assetsPath, item)).isDirectory()
+            ? `${item}/*`
+            : item
+        ),
     };
 
     return this.validatePlan({
@@ -47,62 +74,40 @@ export class SolidStartSite extends SsrSite {
           injections: [this.useCloudFrontFunctionHostHeaderInjection()],
         },
       },
-      edgeFunctions: edge
-        ? {
-            edgeServer: {
-              constructId: "Server",
-              function: {
-                scopeOverride: this as SolidStartSite,
-                ...serverConfig,
-              },
-            },
-          }
-        : undefined,
       origins: {
-        ...(edge
-          ? {}
-          : {
-              regionalServer: {
-                type: "function" as const,
-                constructId: "ServerFunction",
-                function: serverConfig,
-              },
-            }),
+        server: {
+          constructId: "ServerFunction",
+          type: "function" as const,
+          function: serverConfig,
+        },
         s3: {
           type: "s3" as const,
           copy: [
             {
-              from: "dist/client",
+              from: buildMeta.assetsPath,
               to: "",
               cached: true,
-              versionedSubDir: "assets",
-            },
+            }
           ],
         },
       },
       behaviors: [
-        edge
-          ? {
-              cacheType: "server" as const,
-              cfFunction: "serverCfFunction",
-              edgeFunction: "edgeServer",
-              origin: "s3",
-            }
-          : {
-              cacheType: "server" as const,
-              cfFunction: "serverCfFunction",
-              origin: "regionalServer",
-            },
-        // create 1 behaviour for each top level asset file/folder
-        ...fs.readdirSync(path.join(sitePath, "dist/client")).map(
-          (item) =>
+        {
+          cacheType: "server",
+          cfFunction: "serverCfFunction",
+          origin: "server",
+        },
+        {
+          pattern: "_server/",
+          cacheType: "server",
+          cfFunction: "serverCfFunction",
+          origin: "server",
+        },
+        ...buildMeta.staticRoutes.map(
+          (route) =>
             ({
+              pattern: route,
               cacheType: "static",
-              pattern: fs
-                .statSync(path.join(sitePath, "dist/client", item))
-                .isDirectory()
-                ? `${item}/*`
-                : item,
               origin: "s3",
             } as const)
         ),

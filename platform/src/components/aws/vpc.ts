@@ -1206,7 +1206,7 @@ export class Vpc extends Component implements Link.Linkable {
    * A list of VPC security group IDs.
    */
   public get securityGroups() {
-    return [this.securityGroup.id];
+    return output(this.securityGroup).apply((v) => [v.id]);
   }
 
   /**

@@ -22,7 +22,9 @@ export default $config({
     //const apiws = addApiWebsocket();
     //const router = addRouter();
     //const app = addFunction();
+    //const cluster = addCluster();
     //const service = addService();
+    //const task = addTask();
     //const postgres = addPostgres();
     //const redis = addRedis();
     //const cron = addCron();
@@ -206,9 +208,12 @@ export default $config({
       return app;
     }
 
+    function addCluster() {
+      return new sst.aws.Cluster("MyCluster", { vpc });
+    }
+
     function addService() {
-      const cluster = new sst.aws.Cluster("MyCluster", { vpc });
-      const service = cluster.addService("MyService", {
+      return cluster.addService("MyService", {
         loadBalancer: {
           ports: [
             { listen: "80/http" },
@@ -239,7 +244,29 @@ export default $config({
         //],
         link: [bucket],
       });
-      return service;
+    }
+
+    function addTask() {
+      const task = cluster.addTask("MyTask", {
+        image: {
+          context: "images/task",
+        },
+        link: [bucket],
+      });
+
+      new sst.aws.Function("MyTaskApp", {
+        handler: "functions/task/index.handler",
+        url: true,
+        vpc,
+        link: [task],
+      });
+
+      //new sst.aws.Cron("MyTaskCron", {
+      //  schedule: "rate(1 minute)",
+      //  task,
+      //});
+
+      return task;
     }
 
     function addPostgres() {
@@ -273,12 +300,12 @@ export default $config({
     function addCron() {
       const cron = new sst.aws.Cron("MyCron", {
         schedule: "rate(1 minute)",
-        job: {
+        function: {
           handler: "functions/handler-example/index.handler",
           link: [bucket],
         },
       });
-      ret.cron = cron.nodes.job.name;
+      ret.cron = cron.nodes.function.name;
       return cron;
     }
 

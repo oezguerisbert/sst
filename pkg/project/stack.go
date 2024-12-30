@@ -23,15 +23,15 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/workspace"
-	"github.com/sst/ion/pkg/bus"
-	"github.com/sst/ion/pkg/flag"
-	"github.com/sst/ion/pkg/global"
-	"github.com/sst/ion/pkg/id"
-	"github.com/sst/ion/pkg/js"
-	"github.com/sst/ion/pkg/project/common"
-	"github.com/sst/ion/pkg/project/provider"
-	"github.com/sst/ion/pkg/telemetry"
-	"github.com/sst/ion/pkg/types"
+	"github.com/sst/sst/v3/pkg/bus"
+	"github.com/sst/sst/v3/pkg/flag"
+	"github.com/sst/sst/v3/pkg/global"
+	"github.com/sst/sst/v3/pkg/id"
+	"github.com/sst/sst/v3/pkg/js"
+	"github.com/sst/sst/v3/pkg/project/common"
+	"github.com/sst/sst/v3/pkg/project/provider"
+	"github.com/sst/sst/v3/pkg/telemetry"
+	"github.com/sst/sst/v3/pkg/types"
 	"github.com/zeebo/xxh3"
 	"golang.org/x/sync/errgroup"
 )
@@ -69,9 +69,16 @@ type Dev struct {
 }
 type Devs map[string]Dev
 
+type Task struct {
+	Name      string `json:"-"`
+	Command   string `json:"command"`
+	Directory string `json:"directory"`
+}
+
 type CompleteEvent struct {
 	Links       common.Links
 	Devs        Devs
+	Tasks       map[string]Task
 	Outputs     map[string]interface{}
 	Hints       map[string]string
 	Versions    map[string]int

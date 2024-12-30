@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sst/ion/pkg/id"
-	"github.com/sst/ion/pkg/project/provider"
+	"github.com/sst/sst/v3/pkg/id"
+	"github.com/sst/sst/v3/pkg/project/provider"
 )
 
 type PulumiWorkdir struct {
